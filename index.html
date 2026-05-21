@@ -520,7 +520,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 </div>
 
 <script>
-const BOT_USERNAME = "Dollar_Pay0_Bot";
+const BOT_USERNAME = "Money_Plus12_Bot";
 const AD_REWARD    = 0.20;
 const INV_REWARD   = 0.40;
 const TASK_REWARD  = 0.05;
@@ -671,7 +671,7 @@ async function init() {
     document.getElementById("avatar-wrap").textContent = "D";
   }
 
-  const invLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
+  const invLink = `https://t.me/${BOT_USERNAME}/app?startapp=${userId}`;
   document.getElementById("invite-link-txt").textContent = invLink;
 
   if (window._firebaseReady) {
@@ -737,19 +737,37 @@ async function saveUserData() {
 
 async function creditReferrer(refId) {
   if (!dbReady || !window._db) return;
+  if (!refId || refId === userId) return; // prevent self-referral
   try {
-    const { ref, get, update } = window._dbFns;
+    const { ref, get, update, set } = window._dbFns;
     const refRef = window._dbFns.ref(window._db, "users/" + refId);
     const snap = await get(refRef);
     if (snap.exists()) {
       const d = snap.val();
+      const newBalance = +((d.balance || 0) + INV_REWARD).toFixed(2);
+      const newCount = (d.inviteCount || 0) + 1;
+      const newEarned = +((d.inviteEarned || 0) + INV_REWARD).toFixed(2);
       await update(refRef, {
-        balance: +(( d.balance || 0) + INV_REWARD).toFixed(2),
-        inviteCount: (d.inviteCount || 0) + 1,
-        inviteEarned: +(( d.inviteEarned || 0) + INV_REWARD).toFixed(2),
+        balance: newBalance,
+        inviteCount: newCount,
+        inviteEarned: newEarned,
       });
+      console.log("Referrer credited:", refId, "+$" + INV_REWARD);
+    } else {
+      // Referrer not in DB yet - create minimal record so credit isn't lost
+      await set(window._dbFns.ref(window._db, "users/" + refId), {
+        balance: INV_REWARD,
+        inviteCount: 1,
+        inviteEarned: INV_REWARD,
+        adsWatched: 0,
+        adsToday: 0,
+        adsTodayDate: "",
+        tasks: {},
+        referredBy: null,
+      });
+      console.log("Referrer pre-created:", refId);
     }
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error("creditReferrer error:", e); }
 }
 
 function showApp() {
