@@ -675,7 +675,7 @@ async function init() {
     document.getElementById("avatar-wrap").textContent = "D";
   }
 
-  const invLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
+  const invLink = `https://t.me/${BOT_USERNAME}/app?startapp=${userId}`;
   document.getElementById("invite-link-txt").textContent = invLink;
 
   if (window._firebaseReady) {
@@ -867,7 +867,7 @@ function copyLink() {
 
 function shareLink() {
   const link = document.getElementById("invite-link-txt").textContent;
-  const msg  = `🌙 Join LunaEarn and earn real money!\n\n${link}`;
+  const msg  = `💰 Earn money by watching ads! Join using my link:\n${link}`;
   if (window.Telegram?.WebApp?.openTelegramLink) {
     window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(msg)}`);
   } else {
