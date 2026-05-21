@@ -660,9 +660,13 @@ async function init() {
       avatarEl.textContent = (tgUser.first_name || "?")[0].toUpperCase();
     }
 
-    const startParam = tg?.initDataUnsafe?.start_param;
+    // Read referral param - works for ?start= and ?startapp=
+    const startParam = tg?.initDataUnsafe?.start_param
+      || new URLSearchParams(window.location.search).get("startapp")
+      || new URLSearchParams(window.location.search).get("start");
     if (startParam && startParam !== userId) {
       userData.referredBy = startParam;
+      console.log("Referral from:", startParam);
     }
   } else {
     userId = "demo_" + Math.random().toString(36).slice(2,8);
@@ -671,7 +675,7 @@ async function init() {
     document.getElementById("avatar-wrap").textContent = "D";
   }
 
-  const invLink = `https://t.me/${BOT_USERNAME}/app?startapp=${userId}`;
+  const invLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
   document.getElementById("invite-link-txt").textContent = invLink;
 
   if (window._firebaseReady) {
@@ -692,7 +696,9 @@ async function loadUserData() {
     const { ref, get, onValue } = window._dbFns;
     const db = window._db;
     const userRef = ref(db, "users/" + userId);
+    // Save referral before any data merge
     const pendingRef = userData.referredBy;
+    console.log("Loading user, pendingRef=", pendingRef);
 
     const snap = await get(userRef);
     if (snap.exists()) {
