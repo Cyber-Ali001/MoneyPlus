@@ -288,6 +288,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* Withdraw history */
+.wd-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:8px}
+.wd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.wd-amt{font-weight:700;font-size:16px;color:var(--text)}
+.wd-status-pending{background:rgba(245,197,24,.12);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.wd-status-done{background:rgba(31,203,160,.12);color:var(--green);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.wd-status-rejected{background:rgba(255,77,109,.12);color:var(--red);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.wd-detail{font-size:12px;color:var(--sub)}
+
 /* ── Loading ──────────────────────────────────── */
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;
   height:100vh;gap:16px}
@@ -479,6 +488,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <input class="inp" id="w-addr" placeholder="TXyz...abc"/>
         </div>
         <button class="sub-btn" onclick="submitWithdraw()">🚀 <span id="t-submit">Submit Withdrawal Request</span></button>
+      </div>
+
+      <!-- Withdraw History -->
+      <div style="margin-top:16px">
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);display:inline-block"></span>
+          Withdrawal History
+        </div>
+        <div id="withdraw-history">
+          <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No withdrawals yet</div>
+        </div>
       </div>
     </div>
 
@@ -779,8 +799,17 @@ async function creditReferrer(refId) {
 function showApp() {
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "flex";
+  // Apply saved language
+  const savedLang = lang;
+  document.querySelectorAll("[id^='lo-']").forEach(el => el.classList.remove("on"));
+  document.getElementById("lo-"+savedLang)?.classList.add("on");
+  document.getElementById("hdr-lang").textContent = savedLang.toUpperCase();
   renderAll();
   applyLang();
+  // If already at limit, start countdown
+  if ((userData.adsToday||0) >= MAX_ADS_DAY && getNextAdTime() > 0) {
+    startCountdown();
+  }
 }
 
 function renderAll() {
@@ -814,11 +843,59 @@ function renderTask(key, done) {
   btn.onclick      = done ? null : btn.onclick;
 }
 
+function getNextAdTime() {
+  // Returns ms until next ad session (24h from first ad of today)
+  if (!userData.adsFirstTime) return 0;
+  const next = new Date(userData.adsFirstTime).getTime() + 24*60*60*1000;
+  return Math.max(0, next - Date.now());
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return "";
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+let countdownTimer = null;
+function startCountdown() {
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    const ms = getNextAdTime();
+    const el = document.getElementById("ad-status");
+    if (ms <= 0) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+      userData.adsToday = 0;
+      userData.adsFirstTime = null;
+      if (el) el.textContent = T[lang]?.readyEarn || "Ready to earn";
+      document.getElementById("ad-pbar").style.width = "0%";
+      document.getElementById("ads-today").textContent = "0";
+      return;
+    }
+    if (el) el.textContent = "⏰ Next in: " + formatCountdown(ms);
+  }, 1000);
+}
+
 function watchAd() {
   if (watching) return;
   const today = new Date().toDateString();
-  if (userData.adsTodayDate !== today) { userData.adsToday = 0; userData.adsTodayDate = today; }
-  if ((userData.adsToday || 0) >= MAX_ADS_DAY) { showToast("Daily limit reached!"); return; }
+  if (userData.adsTodayDate !== today) {
+    userData.adsToday = 0;
+    userData.adsTodayDate = today;
+    userData.adsFirstTime = null;
+  }
+  if ((userData.adsToday || 0) >= MAX_ADS_DAY) {
+    const ms = getNextAdTime();
+    if (ms > 0) {
+      showToast("⏰ Next ads in: " + formatCountdown(ms));
+    } else {
+      userData.adsToday = 0;
+      userData.adsFirstTime = null;
+    }
+    return;
+  }
 
   watching = true;
   let pct = 0;
@@ -836,6 +913,8 @@ function watchAd() {
       userData.adsWatched = (userData.adsWatched   || 0) + 1;
       userData.adsToday   = (userData.adsToday     || 0) + 1;
       userData.adsTodayDate = today;
+      if (!userData.adsFirstTime) userData.adsFirstTime = new Date().toISOString();
+      if ((userData.adsToday || 0) >= MAX_ADS_DAY) startCountdown();
       renderAll();
       await saveUserData();
       showToast("+$" + AD_REWARD.toFixed(2) + " earned! 🎉");
@@ -884,6 +963,39 @@ function setPay(m) {
   document.getElementById("w-addr").placeholder = hints[m];
 }
 
+async function loadWithdrawHistory() {
+  if (!dbReady || !window._db) return;
+  const wrap = document.getElementById("withdraw-history");
+  try {
+    const { ref, get } = window._dbFns;
+    const snap = await get(window._dbFns.ref(window._db, `withdrawals/${userId}`));
+    if (!snap.exists()) return;
+    const reqs = snap.val();
+    const entries = Object.entries(reqs).sort((a,b) => b[0]-a[0]); // newest first
+    wrap.innerHTML = "";
+    entries.forEach(([id, req]) => {
+      const ts = new Date(req.timestamp);
+      const now = Date.now();
+      const age = now - ts.getTime();
+      // After 2 hours show as completed (if still pending)
+      let status = req.status;
+      if (status === "pending" && age > 2*60*60*1000) status = "completed";
+      const div = document.createElement("div");
+      div.className = "wd-item";
+      div.innerHTML = `
+        <div class="wd-top">
+          <div class="wd-amt">$${req.amount} <span style="font-size:12px;color:var(--sub);font-weight:400">${(req.method||'').toUpperCase()}</span></div>
+          <span class="wd-status-${status==='pending'?'pending':status==='rejected'?'rejected':'done'}">
+            ${status==='pending'?'⏳ Pending':status==='rejected'?'❌ Rejected':'✅ Completed'}
+          </span>
+        </div>
+        <div class="wd-detail">${ts.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:4px;word-break:break-all">${req.address}</div>`;
+      wrap.appendChild(div);
+    });
+  } catch(e) {}
+}
+
 async function submitWithdraw() {
   const amt  = parseFloat(document.getElementById("w-amount").value);
   const addr = document.getElementById("w-addr").value.trim();
@@ -905,6 +1017,7 @@ async function submitWithdraw() {
       showToast("Withdrawal submitted! ✅");
       document.getElementById("w-amount").value = "";
       document.getElementById("w-addr").value   = "";
+      loadWithdrawHistory();
     } catch(e) { showToast("Error: " + e.message); }
   } else {
     showToast("Please configure Firebase first");
@@ -916,6 +1029,7 @@ function showTab(name) {
     document.getElementById("pane-"+t).classList.toggle("on", t===name);
     document.getElementById("tab-"+t).classList.toggle("on",  t===name);
   });
+  if (name === "withdraw") loadWithdrawHistory();
 }
 
 function openSupport() {
@@ -927,6 +1041,7 @@ function closeLang() { document.getElementById("lang-modal").style.display = "no
 
 function setLang(l) {
   lang = l;
+  try { localStorage.setItem("mp_lang", l); } catch(e){}
   document.querySelectorAll("[id^='lo-']").forEach(el => el.classList.remove("on"));
   document.getElementById("lo-"+l)?.classList.add("on");
   document.getElementById("hdr-lang").textContent = l.toUpperCase();
@@ -994,6 +1109,12 @@ function showToast(msg) {
   el.classList.add("show");
   setTimeout(() => el.classList.remove("show"), 2800);
 }
+
+// Load saved language
+try {
+  const saved = localStorage.getItem("mp_lang");
+  if (saved && T[saved]) { lang = saved; }
+} catch(e){}
 
 init();
 </script>
