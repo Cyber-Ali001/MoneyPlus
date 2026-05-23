@@ -728,38 +728,27 @@ function renderTasks() {
   allTasks.forEach((task, i) => {
     const div = document.createElement("div");
     div.className = "task-editor";
-    div.id = "task-editor-" + i;
     div.innerHTML = `
       <div class="task-editor-row">
-        <span style="font-size:12px;color:var(--muted);min-width:24px;font-weight:700">#${i+1}</span>
-        <input class="inp-full" id="t-name-${i}" value="${task.name||''}" placeholder="Task name"
-          oninput="allTasks[${i}].name=this.value"
-          onblur="allTasks[${i}].name=this.value"/>
-        <select class="inp-full" style="max-width:115px" onchange="allTasks[${i}].type=this.value">
+        <span style="font-size:12px;color:var(--muted);min-width:20px">#${i+1}</span>
+        <input class="inp-full" value="${task.name}" placeholder="Task name" onchange="allTasks[${i}].name=this.value"/>
+        <select class="inp-full" style="max-width:110px" onchange="allTasks[${i}].type=this.value">
           <option value="channel" ${task.type==='channel'?'selected':''}>📢 Channel</option>
           <option value="bot"     ${task.type==='bot'    ?'selected':''}>🤖 Bot</option>
           <option value="website" ${task.type==='website'?'selected':''}>🌐 Website</option>
         </select>
       </div>
       <div class="task-editor-row">
-        <input class="inp-full" id="t-url-${i}" value="${task.url||''}" placeholder="https://t.me/..."
-          oninput="allTasks[${i}].url=this.value"
-          onblur="allTasks[${i}].url=this.value"/>
-        <input class="inp-full" id="t-rew-${i}" type="number" step="0.01" value="${task.reward||0.05}"
-          placeholder="$" style="max-width:80px"
-          oninput="allTasks[${i}].reward=parseFloat(this.value)||0.05"
-          onblur="allTasks[${i}].reward=parseFloat(this.value)||0.05"/>
+        <input class="inp-full" value="${task.url}" placeholder="https://t.me/..." onchange="allTasks[${i}].url=this.value"/>
+        <input class="inp-full" type="number" step="0.01" value="${task.reward}" placeholder="Reward $" style="max-width:100px" onchange="allTasks[${i}].reward=parseFloat(this.value)"/>
       </div>
-      <div class="task-editor-row" style="justify-content:space-between">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+      <div class="task-editor-row">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub);cursor:pointer">
           <label class="toggle">
-            <input type="checkbox" ${task.enabled!==false?'checked':''} 
-              onchange="allTasks[${i}].enabled=this.checked;renderTasks()"/>
+            <input type="checkbox" ${task.enabled?'checked':''} onchange="allTasks[${i}].enabled=this.checked"/>
             <span class="toggle-slider"></span>
           </label>
-          <span style="font-size:13px;${task.enabled!==false?'color:var(--green)':'color:var(--muted)'}">
-            ${task.enabled!==false?'✅ Enabled':'⛔ Disabled'}
-          </span>
+          ${task.enabled ? '<span style="color:var(--green)">Enabled</span>' : '<span style="color:var(--muted)">Disabled</span>'}
         </label>
         <button class="btn btn-danger btn-sm" onclick="deleteTask(${i})">🗑️ Delete</button>
       </div>`;
@@ -768,21 +757,8 @@ function renderTasks() {
 }
 
 function addTaskUI() {
-  allTasks.push({ 
-    id: "task_" + Date.now(), 
-    name: "", 
-    url: "", 
-    reward: 0.05, 
-    enabled: true, 
-    type: "channel" 
-  });
+  allTasks.push({ id:"task_"+Date.now(), name:"New Task", url:"", reward:0.05, enabled:true, type:"channel" });
   renderTasks();
-  // Focus the new task name input
-  setTimeout(() => {
-    const idx = allTasks.length - 1;
-    const el = document.getElementById("t-name-"+idx);
-    if(el) el.focus();
-  }, 100);
 }
 
 function deleteTask(i) {
@@ -792,27 +768,8 @@ function deleteTask(i) {
 }
 
 async function saveTasks() {
-  // Collect latest input values before saving
-  allTasks.forEach((task, i) => {
-    const nameEl = document.getElementById("t-name-"+i);
-    const urlEl  = document.getElementById("t-url-"+i);
-    const rewEl  = document.getElementById("t-rew-"+i);
-    if(nameEl) task.name   = nameEl.value.trim();
-    if(urlEl)  task.url    = urlEl.value.trim();
-    if(rewEl)  task.reward = parseFloat(rewEl.value) || 0.05;
-    // Ensure each task has a unique ID
-    if(!task.id) task.id = "task_" + Date.now() + "_" + i;
-  });
-
-  // Filter out empty tasks
-  const validTasks = allTasks.filter(t => t.name && t.url);
-  if(validTasks.length !== allTasks.length) {
-    showToast("⚠️ Fill all name & URL fields!", true);
-    return;
-  }
-
   await window._dbSet(window._dbRef(window._db, "config/tasks"), allTasks);
-  showToast("Tasks saved ✅ - Mini app updated!");
+  showToast("Tasks saved ✅");
 }
 
 // ══════════════════════════════════════════════════
