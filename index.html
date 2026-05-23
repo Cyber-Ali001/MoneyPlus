@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>LunaEarn</title>
 
+<!-- Monetag Rewarded Interstitial SDK -->
+<script src='//libtl.com/sdk.js' data-zone='11046667' data-sdk='show_11046667'></script>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script type="module">
@@ -562,6 +565,7 @@ const T = {
     tgAdsTitle:"Telegram Ads Program",tgAdsSub:"Enable ads on your channel to earn TON",
     tgAdsDesc:"To earn from Telegram ads, your channel needs <strong style='color:var(--accent)'>1,000+ subscribers</strong>. Once eligible, connect via <strong style='color:var(--gold)'>fragment.com</strong>.",
     readyEarn:"Ready to earn",copying:"Copied!",
+    adLoading:"Loading ad…",adWatching:"Watching…",
   },
   fa:{
     support:"پشتیبانی",totalBalance:"موجودی کل",available:"قابل برداشت",
@@ -578,6 +582,7 @@ const T = {
     tgAdsTitle:"برنامه تبلیغات تلگرام",tgAdsSub:"تبلیغات را روی کانال فعال کنید و TON کسب کنید",
     tgAdsDesc:"برای درآمد از تبلیغات تلگرام، کانال شما نیاز به <strong style='color:var(--accent)'>بیش از ۱۰۰۰ مشترک</strong> دارد. پس از واجد شرایط شدن، از طریق <strong style='color:var(--gold)'>fragment.com</strong> متصل شوید.",
     readyEarn:"آماده برای کسب درآمد",copying:"کپی شد!",
+    adLoading:"در حال بارگذاری تبلیغ…",adWatching:"در حال تماشا…",
   },
   ar:{
     support:"الدعم",totalBalance:"الرصيد الكلي",available:"متاح للسحب",
@@ -594,6 +599,7 @@ const T = {
     tgAdsTitle:"برنامج إعلانات تيليغرام",tgAdsSub:"فعّل الإعلانات على قناتك لكسب TON",
     tgAdsDesc:"لكسب المال من إعلانات تيليغرام، تحتاج قناتك إلى <strong style='color:var(--accent)'>1000+ مشترك</strong>. بعد الأهلية، اتصل عبر <strong style='color:var(--gold)'>fragment.com</strong>.",
     readyEarn:"جاهز للكسب",copying:"تم النسخ!",
+    adLoading:"جارٍ تحميل الإعلان…",adWatching:"جارٍ المشاهدة…",
   },
   ru:{
     support:"Поддержка",totalBalance:"ОБЩИЙ БАЛАНС",available:"Доступно для вывода",
@@ -610,6 +616,7 @@ const T = {
     tgAdsTitle:"Программа рекламы Telegram",tgAdsSub:"Включи рекламу на канале и зарабатывай TON",
     tgAdsDesc:"Для заработка на рекламе Telegram нужно <strong style='color:var(--accent)'>1000+ подписчиков</strong>. После — подключись через <strong style='color:var(--gold)'>fragment.com</strong>.",
     readyEarn:"Готово к заработку",copying:"Скопировано!",
+    adLoading:"Загрузка рекламы…",adWatching:"Просмотр…",
   },
   tr:{
     support:"Destek",totalBalance:"TOPLAM BAKİYE",available:"Çekilebilir miktar",
@@ -626,6 +633,7 @@ const T = {
     tgAdsTitle:"Telegram Reklam Programı",tgAdsSub:"Kanalında reklam etkinleştir ve TON kazan",
     tgAdsDesc:"Telegram reklamlarından kazanmak için kanalının <strong style='color:var(--accent)'>1.000+ abonesi</strong> olması gerekir. Uygun olunca <strong style='color:var(--gold)'>fragment.com</strong> üzerinden bağlan.",
     readyEarn:"Kazanmaya hazır",copying:"Kopyalandı!",
+    adLoading:"Reklam yükleniyor…",adWatching:"İzleniyor…",
   },
   hi:{
     support:"सहायता",totalBalance:"कुल शेष",available:"निकासी योग्य",
@@ -642,6 +650,7 @@ const T = {
     tgAdsTitle:"Telegram विज्ञापन कार्यक्रम",tgAdsSub:"चैनल पर विज्ञापन सक्षम करें और TON कमाएं",
     tgAdsDesc:"Telegram विज्ञापनों से कमाने के लिए आपके चैनल में <strong style='color:var(--accent)'>1,000+ सदस्य</strong> होने चाहिए। पात्र होने पर <strong style='color:var(--gold)'>fragment.com</strong> से जुड़ें।",
     readyEarn:"कमाने के लिए तैयार",copying:"कॉपी हो गया!",
+    adLoading:"विज्ञापन लोड हो रहा है…",adWatching:"देख रहे हैं…",
   },
 };
 
@@ -680,7 +689,6 @@ async function init() {
       avatarEl.textContent = (tgUser.first_name || "?")[0].toUpperCase();
     }
 
-    // Read referral param - works for ?start= and ?startapp=
     const startParam = tg?.initDataUnsafe?.start_param
       || new URLSearchParams(window.location.search).get("startapp")
       || new URLSearchParams(window.location.search).get("start");
@@ -716,7 +724,6 @@ async function loadUserData() {
     const { ref, get, onValue } = window._dbFns;
     const db = window._db;
     const userRef = ref(db, "users/" + userId);
-    // Save referral before any data merge
     const pendingRef = userData.referredBy;
     console.log("Loading user, pendingRef=", pendingRef);
 
@@ -763,7 +770,7 @@ async function saveUserData() {
 
 async function creditReferrer(refId) {
   if (!dbReady || !window._db) return;
-  if (!refId || refId === userId) return; // prevent self-referral
+  if (!refId || refId === userId) return;
   try {
     const { ref, get, update, set } = window._dbFns;
     const refRef = window._dbFns.ref(window._db, "users/" + refId);
@@ -780,7 +787,6 @@ async function creditReferrer(refId) {
       });
       console.log("Referrer credited:", refId, "+$" + INV_REWARD);
     } else {
-      // Referrer not in DB yet - create minimal record so credit isn't lost
       await set(window._dbFns.ref(window._db, "users/" + refId), {
         balance: INV_REWARD,
         inviteCount: 1,
@@ -799,14 +805,12 @@ async function creditReferrer(refId) {
 function showApp() {
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "flex";
-  // Apply saved language
   const savedLang = lang;
   document.querySelectorAll("[id^='lo-']").forEach(el => el.classList.remove("on"));
   document.getElementById("lo-"+savedLang)?.classList.add("on");
   document.getElementById("hdr-lang").textContent = savedLang.toUpperCase();
   renderAll();
   applyLang();
-  // If already at limit, start countdown
   if ((userData.adsToday||0) >= MAX_ADS_DAY && getNextAdTime() > 0) {
     startCountdown();
   }
@@ -844,7 +848,6 @@ function renderTask(key, done) {
 }
 
 function getNextAdTime() {
-  // Returns ms until next ad session (24h from first ad of today)
   if (!userData.adsFirstTime) return 0;
   const next = new Date(userData.adsFirstTime).getTime() + 24*60*60*1000;
   return Math.max(0, next - Date.now());
@@ -878,14 +881,17 @@ function startCountdown() {
   }, 1000);
 }
 
+// ── watchAd: نمایش تبلیغ Monetag، سپس ثبت پاداش ──────────────
 function watchAd() {
   if (watching) return;
+
   const today = new Date().toDateString();
   if (userData.adsTodayDate !== today) {
     userData.adsToday = 0;
     userData.adsTodayDate = today;
     userData.adsFirstTime = null;
   }
+
   if ((userData.adsToday || 0) >= MAX_ADS_DAY) {
     const ms = getNextAdTime();
     if (ms > 0) {
@@ -898,26 +904,66 @@ function watchAd() {
   }
 
   watching = true;
-  let pct = 0;
   document.getElementById("ad-play-ic").textContent = "⏳";
-  document.getElementById("ad-status").textContent  = "Watching…";
+  document.getElementById("ad-status").textContent = T[lang].adLoading || "Loading ad…";
 
+  // نمایش تبلیغ Monetag Rewarded Interstitial
+  if (typeof show_11046667 === "function") {
+    show_11046667()
+      .then(() => {
+        // کاربر تبلیغ را کامل دید - پاداش ثبت می‌شود
+        grantAdReward();
+      })
+      .catch((err) => {
+        // تبلیغ نمایش داده نشد یا بسته شد بدون تکمیل
+        console.warn("Monetag ad not completed:", err);
+        watching = false;
+        document.getElementById("ad-play-ic").textContent = "▶";
+        document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
+        showToast("❌ Ad not completed, no reward");
+      });
+  } else {
+    // اگر SDK لود نشده باشد - fallback: شبیه‌سازی قبلی
+    console.warn("Monetag SDK not loaded, using fallback");
+    simulateAdFallback();
+  }
+}
+
+// ── ثبت پاداش پس از تکمیل تبلیغ ──────────────────────────────
+async function grantAdReward() {
+  const today = new Date().toDateString();
+  document.getElementById("ad-play-ic").textContent = "▶";
+  userData.balance    = +((userData.balance    || 0) + AD_REWARD).toFixed(2);
+  userData.adsWatched = (userData.adsWatched   || 0) + 1;
+  userData.adsToday   = (userData.adsToday     || 0) + 1;
+  userData.adsTodayDate = today;
+  if (!userData.adsFirstTime) userData.adsFirstTime = new Date().toISOString();
+
+  const adPct = (userData.adsToday / MAX_ADS_DAY) * 100;
+  document.getElementById("ad-pbar").style.width = Math.min(adPct, 100) + "%";
+
+  if ((userData.adsToday || 0) >= MAX_ADS_DAY) startCountdown();
+  else document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
+
+  watching = false;
+  renderAll();
+  await saveUserData();
+  showToast("+$" + AD_REWARD.toFixed(2) + " earned! 🎉");
+}
+
+// ── Fallback اگر SDK لود نشد ───────────────────────────────────
+function simulateAdFallback() {
+  let pct = 0;
+  document.getElementById("ad-status").textContent = T[lang].adWatching || "Watching…";
+  const today = new Date().toDateString();
   const iv = setInterval(async () => {
     pct += 4;
-    document.getElementById("ad-pbar").style.width = Math.min(((userData.adsToday + pct/100) / MAX_ADS_DAY) * 100, 100) + "%";
+    const currentPct = ((userData.adsToday + pct/100) / MAX_ADS_DAY) * 100;
+    document.getElementById("ad-pbar").style.width = Math.min(currentPct, 100) + "%";
     if (pct >= 100) {
       clearInterval(iv);
       watching = false;
-      document.getElementById("ad-play-ic").textContent = "▶";
-      userData.balance    = +((userData.balance    || 0) + AD_REWARD).toFixed(2);
-      userData.adsWatched = (userData.adsWatched   || 0) + 1;
-      userData.adsToday   = (userData.adsToday     || 0) + 1;
-      userData.adsTodayDate = today;
-      if (!userData.adsFirstTime) userData.adsFirstTime = new Date().toISOString();
-      if ((userData.adsToday || 0) >= MAX_ADS_DAY) startCountdown();
-      renderAll();
-      await saveUserData();
-      showToast("+$" + AD_REWARD.toFixed(2) + " earned! 🎉");
+      await grantAdReward();
     }
   }, 120);
 }
@@ -971,13 +1017,12 @@ async function loadWithdrawHistory() {
     const snap = await get(window._dbFns.ref(window._db, `withdrawals/${userId}`));
     if (!snap.exists()) return;
     const reqs = snap.val();
-    const entries = Object.entries(reqs).sort((a,b) => b[0]-a[0]); // newest first
+    const entries = Object.entries(reqs).sort((a,b) => b[0]-a[0]);
     wrap.innerHTML = "";
     entries.forEach(([id, req]) => {
       const ts = new Date(req.timestamp);
       const now = Date.now();
       const age = now - ts.getTime();
-      // After 2 hours show as completed (if still pending)
       let status = req.status;
       if (status === "pending" && age > 2*60*60*1000) status = "completed";
       const div = document.createElement("div");
