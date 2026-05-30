@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>LunaEarn</title>
 
-<!-- Monetag Rewarded Interstitial SDK -->
-<script src='//libtl.com/sdk.js' data-zone='11046667' data-sdk='show_11046667'></script>
+<!-- Adsgram SDK -->
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -670,6 +670,15 @@ let watching   = false;
 let payMethod  = "usdt";
 let dbReady    = false;
 
+// ── Adsgram AdController (initialized once) ───────────────────
+let AdController = null;
+function getAdController() {
+  if (!AdController && window.Adsgram) {
+    AdController = window.Adsgram.init({ blockId: "33560" });
+  }
+  return AdController;
+}
+
 window.Telegram?.WebApp?.expand();
 
 async function init() {
@@ -881,7 +890,7 @@ function startCountdown() {
   }, 1000);
 }
 
-// ── watchAd: نمایش تبلیغ Monetag، سپس ثبت پاداش ──────────────
+// ── watchAd: نمایش تبلیغ Adsgram، سپس ثبت پاداش ──────────────
 function watchAd() {
   if (watching) return;
 
@@ -907,24 +916,33 @@ function watchAd() {
   document.getElementById("ad-play-ic").textContent = "⏳";
   document.getElementById("ad-status").textContent = T[lang].adLoading || "Loading ad…";
 
-  // نمایش تبلیغ Monetag Rewarded Interstitial
-  if (typeof show_11046667 === "function") {
-    show_11046667()
-      .then(() => {
-        // کاربر تبلیغ را کامل دید - پاداش ثبت می‌شود
-        grantAdReward();
+  // نمایش تبلیغ Adsgram Rewarded
+  const controller = getAdController();
+  if (controller) {
+    controller.show()
+      .then((result) => {
+        if (result.done) {
+          // کاربر تبلیغ را کامل دید - پاداش ثبت می‌شود
+          grantAdReward();
+        } else {
+          // تبلیغ نمایش داده شد ولی کامل نشد
+          watching = false;
+          document.getElementById("ad-play-ic").textContent = "▶";
+          document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
+          showToast("❌ Ad not completed, no reward");
+        }
       })
-      .catch((err) => {
-        // تبلیغ نمایش داده نشد یا بسته شد بدون تکمیل
-        console.warn("Monetag ad not completed:", err);
+      .catch((result) => {
+        // خطا در نمایش تبلیغ یا بسته شدن بدون تکمیل
+        console.warn("Adsgram ad error:", result);
         watching = false;
         document.getElementById("ad-play-ic").textContent = "▶";
         document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
         showToast("❌ Ad not completed, no reward");
       });
   } else {
-    // اگر SDK لود نشده باشد - fallback: شبیه‌سازی قبلی
-    console.warn("Monetag SDK not loaded, using fallback");
+    // اگر SDK لود نشده باشد - fallback
+    console.warn("Adsgram SDK not loaded, using fallback");
     simulateAdFallback();
   }
 }
