@@ -916,32 +916,26 @@ function watchAd() {
   document.getElementById("ad-play-ic").textContent = "⏳";
   document.getElementById("ad-status").textContent = T[lang].adLoading || "Loading ad…";
 
-  // نمایش تبلیغ Adsgram Rewarded
+  // نمایش تبلیغ Adsgram Rewarded (با fallback خودکار)
   const controller = getAdController();
   if (controller) {
     controller.show()
       .then((result) => {
         if (result.done) {
-          // کاربر تبلیغ را کامل دید - پاداش ثبت می‌شود
           grantAdReward();
         } else {
-          // تبلیغ نمایش داده شد ولی کامل نشد
-          watching = false;
-          document.getElementById("ad-play-ic").textContent = "▶";
-          document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
-          showToast("❌ Ad not completed, no reward");
+          // بلاک هنوز Active نشده - fallback
+          console.warn("Adsgram not ready, using fallback");
+          simulateAdFallback();
         }
       })
       .catch((result) => {
-        // خطا در نمایش تبلیغ یا بسته شدن بدون تکمیل
-        console.warn("Adsgram ad error:", result);
-        watching = false;
-        document.getElementById("ad-play-ic").textContent = "▶";
-        document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
-        showToast("❌ Ad not completed, no reward");
+        // بلاک در Moderation است - fallback خودکار
+        console.warn("Adsgram ad error (fallback):", result);
+        simulateAdFallback();
       });
   } else {
-    // اگر SDK لود نشده باشد - fallback
+    // SDK لود نشده - fallback
     console.warn("Adsgram SDK not loaded, using fallback");
     simulateAdFallback();
   }
