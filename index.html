@@ -941,6 +941,23 @@ function watchAd() {
   }
 }
 
+// ── AdsGalaxy: تبلیغ اختیاری که خودکار بعد از Adsgram نمایش داده می‌شود ──
+// این تبلیغ هیچ پاداشی به صورت خودکار پرداخت نمی‌کند و صرفاً نمایشی/اختیاری است.
+function tryShowAdsGalaxy() {
+  if (typeof window.showAdsGalaxy !== "function") {
+    console.warn("AdsGalaxy SDK not loaded, skipping");
+    return;
+  }
+  window.showAdsGalaxy()
+    .then((result) => {
+      // پاداش ارزشمند اینجا داده نمی‌شود؛ فقط برای لاگ/بک‌اند در صورت نیاز.
+      console.log("AdsGalaxy completed:", result);
+    })
+    .catch((error) => {
+      console.log("AdsGalaxy error:", error?.code, error?.message);
+    });
+}
+
 // ── ثبت پاداش پس از تکمیل تبلیغ ──────────────────────────────
 async function grantAdReward() {
   const today = new Date().toDateString();
@@ -961,6 +978,9 @@ async function grantAdReward() {
   renderAll();
   await saveUserData();
   showToast("+$" + AD_REWARD.toFixed(2) + " earned! 🎉");
+
+  // بعد از پاداش Adsgram، به صورت خودکار تبلیغ اختیاری AdsGalaxy نمایش داده می‌شود
+  tryShowAdsGalaxy();
 }
 
 // ── Fallback اگر SDK لود نشد ───────────────────────────────────
