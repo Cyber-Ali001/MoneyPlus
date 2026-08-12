@@ -8,6 +8,9 @@
 <!-- Adsgram SDK -->
 <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 
+<!-- AdsGalaxy SDK -->
+<script src="https://app.adsgalaxy.online/sdk.js?id=31"></script>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script type="module">
@@ -922,7 +925,8 @@ function watchAd() {
     controller.show()
       .then((result) => {
         if (result.done) {
-          grantAdReward();
+          // تبلیغ Adsgram تا آخر دیده شد -> حالا AdsGalaxy پخش شود، بعد پاداش
+          playAdsGalaxyThenReward();
         } else {
           // بلاک هنوز Active نشده - fallback
           console.warn("Adsgram not ready, using fallback");
@@ -939,23 +943,6 @@ function watchAd() {
     console.warn("Adsgram SDK not loaded, using fallback");
     simulateAdFallback();
   }
-}
-
-// ── AdsGalaxy: تبلیغ اختیاری که خودکار بعد از Adsgram نمایش داده می‌شود ──
-// این تبلیغ هیچ پاداشی به صورت خودکار پرداخت نمی‌کند و صرفاً نمایشی/اختیاری است.
-function tryShowAdsGalaxy() {
-  if (typeof window.showAdsGalaxy !== "function") {
-    console.warn("AdsGalaxy SDK not loaded, skipping");
-    return;
-  }
-  window.showAdsGalaxy()
-    .then((result) => {
-      // پاداش ارزشمند اینجا داده نمی‌شود؛ فقط برای لاگ/بک‌اند در صورت نیاز.
-      console.log("AdsGalaxy completed:", result);
-    })
-    .catch((error) => {
-      console.log("AdsGalaxy error:", error?.code, error?.message);
-    });
 }
 
 // ── ثبت پاداش پس از تکمیل تبلیغ ──────────────────────────────
@@ -978,9 +965,26 @@ async function grantAdReward() {
   renderAll();
   await saveUserData();
   showToast("+$" + AD_REWARD.toFixed(2) + " earned! 🎉");
+}
 
-  // بعد از پاداش Adsgram، به صورت خودکار تبلیغ اختیاری AdsGalaxy نمایش داده می‌شود
-  tryShowAdsGalaxy();
+// ── بعد از دیدن کامل Adsgram: پخش خودکار AdsGalaxy، سپس پاداش ──────
+// دیدن AdsGalaxy اجباری نیست: چه کاربر تا آخر ببیند (then) چه ببندد/خطا
+// بخورد (catch)، در هر دو حالت پاداش داده می‌شود چون Adsgram کامل دیده شده.
+function playAdsGalaxyThenReward() {
+  if (typeof window.showAdsGalaxy !== "function") {
+    console.warn("AdsGalaxy SDK not loaded, granting reward directly");
+    grantAdReward();
+    return;
+  }
+  window.showAdsGalaxy()
+    .then((result) => {
+      console.log("AdsGalaxy result:", result);
+      grantAdReward();
+    })
+    .catch((error) => {
+      console.log("AdsGalaxy closed/error (reward still granted):", error?.code, error?.message);
+      grantAdReward();
+    });
 }
 
 // ── Fallback اگر SDK لود نشد ───────────────────────────────────
