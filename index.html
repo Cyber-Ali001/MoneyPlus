@@ -916,32 +916,38 @@ function watchAd() {
   document.getElementById("ad-play-ic").textContent = "⏳";
   document.getElementById("ad-status").textContent = T[lang].adLoading || "Loading ad…";
 
-  // نمایش تبلیغ Adsgram Rewarded (با fallback خودکار)
+  // نمایش تبلیغ Adsgram Rewarded (با fallback فقط وقتی SDK لود نشده)
   const controller = getAdController();
   if (controller) {
     controller.show()
       .then((result) => {
         if (result.done) {
+          // تبلیغ واقعاً تا انتها دیده شد -> پاداش بده
           grantAdReward();
         } else {
-          // بلاک هنوز Active نشده - fallback
-          console.warn("Adsgram not ready, using fallback");
-          simulateAdFallback();
+          // تبلیغ کامل دیده نشد (کاربر آن را بست) -> بدون پاداش
+          watching = false;
+          document.getElementById("ad-play-ic").textContent = "▶";
+          document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
+          showToast("Ad was not completed. Try again.");
         }
       })
       .catch((result) => {
-        // بلاک در Moderation است - fallback خودکار
-        console.warn("Adsgram ad error (fallback):", result);
-        simulateAdFallback();
+        // خطای واقعی Adsgram (rate-limit / too often / moderation و ...) -> بدون پاداش
+        console.warn("Adsgram ad error:", result);
+        watching = false;
+        document.getElementById("ad-play-ic").textContent = "▶";
+        document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
+        showToast("⏰ Please wait a few seconds and try again.");
       });
   } else {
-    // SDK لود نشده - fallback
+    // فقط وقتی SDK اصلاً لود نشده (مثلاً خارج از تلگرام/حالت تست) از fallback استفاده کن
     console.warn("Adsgram SDK not loaded, using fallback");
     simulateAdFallback();
   }
 }
 
-// ── ثبت پاداش پس از تکمیل تبلیغ ──────────────────────────────
+// ── ثبت پاداش پس از تکمیل واقعی تبلیغ ─────────────────────────
 async function grantAdReward() {
   const today = new Date().toDateString();
   document.getElementById("ad-play-ic").textContent = "▶";
@@ -963,7 +969,7 @@ async function grantAdReward() {
   showToast("+$" + AD_REWARD.toFixed(2) + " earned! 🎉");
 }
 
-// ── Fallback اگر SDK لود نشد ───────────────────────────────────
+// ── Fallback فقط اگر SDK لود نشد (بدون اتصال واقعی به Adsgram) ─
 function simulateAdFallback() {
   let pct = 0;
   document.getElementById("ad-status").textContent = T[lang].adWatching || "Watching…";
