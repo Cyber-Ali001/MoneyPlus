@@ -155,6 +155,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .ad-card:hover{border-color:var(--accent);transform:translateY(-2px)}
 .ad-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,var(--accent),var(--green))}
+.ad-card.locked{pointer-events:none;opacity:.55}
 .ad-top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
 .ad-play{width:52px;height:52px;border-radius:50%;
   background:linear-gradient(135deg,var(--accent),var(--accent2));
@@ -370,7 +371,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         <span class="live-dot" style="margin-left:6px"></span>
       </div>
 
-      <div class="ad-card" onclick="watchAd()">
+      <div class="ad-card" id="ad-card" onclick="watchAd()">
         <div class="ad-badge" id="ad-badge">+$0.20</div>
         <div class="ad-top">
           <div class="ad-play" id="ad-play-ic">▶</div>
@@ -960,13 +961,29 @@ async function grantAdReward() {
   const adPct = (userData.adsToday / MAX_ADS_DAY) * 100;
   document.getElementById("ad-pbar").style.width = Math.min(adPct, 100) + "%";
 
-  if ((userData.adsToday || 0) >= MAX_ADS_DAY) startCountdown();
-  else document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
-
-  watching = false;
   renderAll();
   await saveUserData();
   showToast("+$" + AD_REWARD.toFixed(2) + " earned! 🎉");
+
+  // اگر سقف روزانه پر شد، شمارش معکوس شروع شود و قفل موقت لازم نیست
+  if ((userData.adsToday || 0) >= MAX_ADS_DAY) {
+    startCountdown();
+    watching = false;
+    document.getElementById("ad-card")?.classList.remove("locked");
+    return;
+  }
+
+  // قفل موقت ۴ ثانیه‌ای روی کارت تبلیغ تا Adsgram تبلیغ بعدی را آماده کند
+  // این از کلیک‌های پیاپی (spam click) بلافاصله بعد از پاداش جلوگیری می‌کند
+  const adCard = document.getElementById("ad-card");
+  adCard?.classList.add("locked");
+  document.getElementById("ad-status").textContent = "⏳ " + (T[lang].adLoading || "Loading ad…");
+
+  setTimeout(() => {
+    watching = false;
+    adCard?.classList.remove("locked");
+    document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
+  }, 4000);
 }
 
 // ── Fallback فقط اگر SDK لود نشد (بدون اتصال واقعی به Adsgram) ─
@@ -980,7 +997,6 @@ function simulateAdFallback() {
     document.getElementById("ad-pbar").style.width = Math.min(currentPct, 100) + "%";
     if (pct >= 100) {
       clearInterval(iv);
-      watching = false;
       await grantAdReward();
     }
   }, 120);
