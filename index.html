@@ -11,9 +11,6 @@
 <!-- GigaPub SDK -->
 <script src="https://ad.gigapub.tech/script?id=7751"></script>
 
-<!-- AdsGalaxy SDK -->
-<script src="https://app.adsgalaxy.online/sdk.js?id=31"></script>
-
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script type="module">
@@ -535,6 +532,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 
 </div>
 
+<div class="overlay" id="adsterra-overlay" style="display:none;align-items:center;justify-content:center;">
+  <div class="sheet" style="border-radius:22px;max-width:340px;width:90%;padding:16px;position:relative;">
+    <button id="adsterra-close-btn" type="button" style="position:absolute;top:8px;right:8px;background:transparent;border:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;">×</button>
+    <div id="container-2627a98398e0bd59cb2bf0a890d9d6ff" style="margin-top:18px;min-height:60px;"></div>
+  </div>
+</div>
+
 <div class="overlay" id="lang-modal" style="display:none" onclick="closeLang()">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-title" id="t-choose-lang">Choose Language</div>
@@ -955,53 +959,80 @@ function watchAd() {
   }
 }
 
-// ── نمایش تبلیغ اختیاری GigaPub بعد از Adsgram، سپس AdsGalaxy، سپس ثبت پاداش ─
-// GigaPub و AdsGalaxy هر دو اختیاری هستند: چه کاربر آن‌ها را کامل ببیند، چه ببندد،
-// چه هیچ تبلیغی نمایش داده نشود یا ارور بدهد، در همه حالت‌ها هیچ خطایی به کاربر
-// نشان داده نمی‌شود و پاداش (که به‌خاطر دیدن اجباری Adsgram قطعی است) داده می‌شود.
+// ── نمایش تبلیغ اختیاری GigaPub بعد از Adsgram، سپس Adsterra، سپس ثبت پاداش ─
+// GigaPub اختیاری است: چه کاربر آن را کامل ببیند، چه ببندد، چه هیچ تبلیغی
+// نمایش داده نشود یا ارور بدهد، در همه حالت‌ها هیچ خطایی به کاربر نشان داده
+// نمی‌شود و در نهایت (بعد از نوبت Adsterra) پاداش داده می‌شود.
 function playGigaPubThenReward() {
   try {
     if (window.showGiga) {
       window.showGiga()
         .then(() => {
-          // تبلیغ GigaPub بسته شد -> حالا نوبت AdsGalaxy
-          playAdsGalaxyThenReward();
+          // تبلیغ GigaPub بسته شد -> حالا نوبت Adsterra
+          playAdsterraThenReward();
         })
         .catch(() => {
-          // هر خطایی از GigaPub (نمایش نیامد، رد شد و ...) نادیده گرفته می‌شود -> نوبت AdsGalaxy
-          playAdsGalaxyThenReward();
+          // هر خطایی از GigaPub (نمایش نیامد، رد شد و ...) نادیده گرفته می‌شود -> نوبت Adsterra
+          playAdsterraThenReward();
         });
     } else {
-      // اسکریپت GigaPub لود نشده -> بدون نمایش خطا، نوبت AdsGalaxy
-      playAdsGalaxyThenReward();
+      // اسکریپت GigaPub لود نشده -> بدون نمایش خطا، نوبت Adsterra
+      playAdsterraThenReward();
     }
   } catch (e) {
-    // هرگونه خطای غیرمنتظره در فراخوانی GigaPub کاملاً بی‌صدا باشد -> نوبت AdsGalaxy
-    playAdsGalaxyThenReward();
+    // هرگونه خطای غیرمنتظره در فراخوانی GigaPub کاملاً بی‌صدا باشد -> نوبت Adsterra
+    playAdsterraThenReward();
   }
 }
 
-// ── نمایش تبلیغ اختیاری AdsGalaxy بعد از GigaPub، سپس ثبت پاداش ────
-// AdsGalaxy هم اختیاری است: چه دیده شود چه نه، چه ارور بدهد چه نه،
-// هیچ خطایی به کاربر نشان داده نمی‌شود و در انتها پاداش داده می‌شود.
-function playAdsGalaxyThenReward() {
+// ── نمایش تبلیغ اختیاری Adsterra بعد از GigaPub، سپس ثبت پاداش ────
+// Adsterra هم اختیاری است: چه دیده شود چه نه، چه بارگذاری‌اش با خطا مواجه شود چه نه،
+// هیچ خطایی به کاربر نشان داده نمی‌شود و در انتها (چه با بستن دستی، چه با اتمام
+// زمان نمایش) پاداش داده می‌شود. Adsterra کال‌بک تکمیل ندارد، پس یک بازهٔ کوتاه
+// برای نمایش در نظر گرفته می‌شود و بعد به‌صورت خودکار ادامه داده می‌شود.
+function playAdsterraThenReward() {
   try {
-    if (window.showAdsGalaxy) {
-      window.showAdsGalaxy()
-        .then(function (result) {
-          // تبلیغ AdsGalaxy بسته شد -> پاداش داده شود
-          grantAdReward();
-        })
-        .catch(function (error) {
-          // هر خطایی از AdsGalaxy نادیده گرفته می‌شود ولی پاداش داده می‌شود
-          grantAdReward();
-        });
-    } else {
-      // اسکریپت AdsGalaxy لود نشده -> بدون نمایش خطا، پاداش داده شود
+    const overlay   = document.getElementById("adsterra-overlay");
+    const container = document.getElementById("container-2627a98398e0bd59cb2bf0a890d9d6ff");
+    const closeBtn  = document.getElementById("adsterra-close-btn");
+
+    if (!overlay || !container) {
+      // اگر ساختار تبلیغ در صفحه نباشد، بدون نمایش خطا مستقیم پاداش داده شود
+      grantAdReward();
+      return;
+    }
+
+    let finished = false;
+    function finishAdsterra() {
+      if (finished) return;
+      finished = true;
+      overlay.style.display = "none";
+      container.innerHTML = "";
       grantAdReward();
     }
+
+    container.innerHTML = "";
+    overlay.style.display = "flex";
+    if (closeBtn) closeBtn.onclick = finishAdsterra;
+
+    try {
+      const script = document.createElement("script");
+      script.async = true;
+      script.setAttribute("data-cfasync", "false");
+      script.src = "https://pl30875740.effectivecpmnetwork.com/2627a98398e0bd59cb2bf0a890d9d6ff/invoke.js";
+      script.onerror = function () {
+        // بارگذاری تبلیغ Adsterra با خطا مواجه شد -> کاملاً بی‌صدا نادیده گرفته می‌شود
+      };
+      container.appendChild(script);
+    } catch (e) {
+      // خطای غیرمنتظره هنگام درج اسکریپت Adsterra کاملاً بی‌صدا باشد
+    }
+
+    // نمایش تبلیغ اختیاری است؛ کاربر می‌تواند ببندد، یا بعد از این بازهٔ کوتاه
+    // به‌صورت خودکار ادامه داده می‌شود و پاداش ثبت می‌شود
+    setTimeout(finishAdsterra, 6000);
   } catch (e) {
-    // هرگونه خطای غیرمنتظره در فراخوانی AdsGalaxy کاملاً بی‌صدا باشد و پاداش داده شود
+    // هرگونه خطای غیرمنتظره در نمایش Adsterra کاملاً بی‌صدا باشد و پاداش داده شود
     grantAdReward();
   }
 }
