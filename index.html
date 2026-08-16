@@ -8,17 +8,10 @@
 <!-- Adsgram SDK -->
 <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 
+<!-- GigaPub SDK -->
+<script src="https://ad.gigapub.tech/script?id=7751"></script>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<script src="https://telegram.org/js/telegram-web-app.js?56"></script>
-
-<script type="text/javascript" src="https://cdn.tgads.space/assets/js/adexium-widget.min.js"></script>
-<script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', () => {
-        const adexiumWidget = new AdexiumWidget({wid: 'a25bfaba-ae65-45d6-8e2b-dcca8ce98932', adFormat: 'push-like'});
-        adexiumWidget.autoMode();
-    });
-</script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -933,8 +926,9 @@ function watchAd() {
     controller.show()
       .then((result) => {
         if (result.done) {
-          // تبلیغ واقعاً تا انتها دیده شد -> پاداش بده
-          grantAdReward();
+          // تبلیغ Adsgram (اجباری) تا انتها دیده شد -> حالا تبلیغ اختیاری GigaPub نمایش داده شود
+          // پاداش فقط بعد از بسته‌شدن GigaPub (چه دیده شود چه ارور بدهد) داده می‌شود
+          playGigaPubThenReward();
         } else {
           // تبلیغ کامل دیده نشد (کاربر آن را بست) -> بدون پاداش
           watching = false;
@@ -955,6 +949,32 @@ function watchAd() {
     // فقط وقتی SDK اصلاً لود نشده (مثلاً خارج از تلگرام/حالت تست) از fallback استفاده کن
     console.warn("Adsgram SDK not loaded, using fallback");
     simulateAdFallback();
+  }
+}
+
+// ── نمایش تبلیغ اختیاری GigaPub بعد از Adsgram، سپس ثبت پاداش ─
+// GigaPub اختیاری است: چه کاربر آن را کامل ببیند، چه ببندد، چه هیچ تبلیغی
+// نمایش داده نشود یا ارور بدهد، در همه حالت‌ها هیچ خطایی به کاربر نشان داده
+// نمی‌شود و پاداش (که به‌خاطر دیدن اجباری Adsgram قطعی است) داده می‌شود.
+function playGigaPubThenReward() {
+  try {
+    if (window.showGiga) {
+      window.showGiga()
+        .then(() => {
+          // تبلیغ GigaPub بسته شد -> پاداش داده شود
+          grantAdReward();
+        })
+        .catch(() => {
+          // هر خطایی از GigaPub (نمایش نیامد، رد شد و ...) نادیده گرفته می‌شود ولی پاداش داده می‌شود
+          grantAdReward();
+        });
+    } else {
+      // اسکریپت GigaPub لود نشده -> بدون نمایش خطا، پاداش داده شود
+      grantAdReward();
+    }
+  } catch (e) {
+    // هرگونه خطای غیرمنتظره در فراخوانی GigaPub کاملاً بی‌صدا باشد و پاداش داده شود
+    grantAdReward();
   }
 }
 
