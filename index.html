@@ -11,6 +11,9 @@
 <!-- GigaPub SDK -->
 <script src="https://ad.gigapub.tech/script?id=7751"></script>
 
+<!-- AdsGalaxy SDK -->
+<script src="https://app.adsgalaxy.online/sdk.js?id=31"></script>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script type="module">
@@ -952,28 +955,53 @@ function watchAd() {
   }
 }
 
-// ── نمایش تبلیغ اختیاری GigaPub بعد از Adsgram، سپس ثبت پاداش ─
-// GigaPub اختیاری است: چه کاربر آن را کامل ببیند، چه ببندد، چه هیچ تبلیغی
-// نمایش داده نشود یا ارور بدهد، در همه حالت‌ها هیچ خطایی به کاربر نشان داده
-// نمی‌شود و پاداش (که به‌خاطر دیدن اجباری Adsgram قطعی است) داده می‌شود.
+// ── نمایش تبلیغ اختیاری GigaPub بعد از Adsgram، سپس AdsGalaxy، سپس ثبت پاداش ─
+// GigaPub و AdsGalaxy هر دو اختیاری هستند: چه کاربر آن‌ها را کامل ببیند، چه ببندد،
+// چه هیچ تبلیغی نمایش داده نشود یا ارور بدهد، در همه حالت‌ها هیچ خطایی به کاربر
+// نشان داده نمی‌شود و پاداش (که به‌خاطر دیدن اجباری Adsgram قطعی است) داده می‌شود.
 function playGigaPubThenReward() {
   try {
     if (window.showGiga) {
       window.showGiga()
         .then(() => {
-          // تبلیغ GigaPub بسته شد -> پاداش داده شود
-          grantAdReward();
+          // تبلیغ GigaPub بسته شد -> حالا نوبت AdsGalaxy
+          playAdsGalaxyThenReward();
         })
         .catch(() => {
-          // هر خطایی از GigaPub (نمایش نیامد، رد شد و ...) نادیده گرفته می‌شود ولی پاداش داده می‌شود
+          // هر خطایی از GigaPub (نمایش نیامد، رد شد و ...) نادیده گرفته می‌شود -> نوبت AdsGalaxy
+          playAdsGalaxyThenReward();
+        });
+    } else {
+      // اسکریپت GigaPub لود نشده -> بدون نمایش خطا، نوبت AdsGalaxy
+      playAdsGalaxyThenReward();
+    }
+  } catch (e) {
+    // هرگونه خطای غیرمنتظره در فراخوانی GigaPub کاملاً بی‌صدا باشد -> نوبت AdsGalaxy
+    playAdsGalaxyThenReward();
+  }
+}
+
+// ── نمایش تبلیغ اختیاری AdsGalaxy بعد از GigaPub، سپس ثبت پاداش ────
+// AdsGalaxy هم اختیاری است: چه دیده شود چه نه، چه ارور بدهد چه نه،
+// هیچ خطایی به کاربر نشان داده نمی‌شود و در انتها پاداش داده می‌شود.
+function playAdsGalaxyThenReward() {
+  try {
+    if (window.showAdsGalaxy) {
+      window.showAdsGalaxy()
+        .then(function (result) {
+          // تبلیغ AdsGalaxy بسته شد -> پاداش داده شود
+          grantAdReward();
+        })
+        .catch(function (error) {
+          // هر خطایی از AdsGalaxy نادیده گرفته می‌شود ولی پاداش داده می‌شود
           grantAdReward();
         });
     } else {
-      // اسکریپت GigaPub لود نشده -> بدون نمایش خطا، پاداش داده شود
+      // اسکریپت AdsGalaxy لود نشده -> بدون نمایش خطا، پاداش داده شود
       grantAdReward();
     }
   } catch (e) {
-    // هرگونه خطای غیرمنتظره در فراخوانی GigaPub کاملاً بی‌صدا باشد و پاداش داده شود
+    // هرگونه خطای غیرمنتظره در فراخوانی AdsGalaxy کاملاً بی‌صدا باشد و پاداش داده شود
     grantAdReward();
   }
 }
