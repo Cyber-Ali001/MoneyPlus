@@ -535,9 +535,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 
 </div>
 
-<div class="overlay" id="adsterra-overlay" style="display:none;align-items:center;justify-content:center;">
+<div class="overlay" id="tads-overlay" style="display:none;align-items:center;justify-content:center;">
   <div class="sheet" style="border-radius:22px;max-width:340px;width:90%;padding:16px;position:relative;">
-    <button id="adsterra-close-btn" type="button" style="position:absolute;top:8px;right:8px;background:transparent;border:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;">×</button>
+    <button id="tads-close-btn" type="button" style="position:absolute;top:8px;right:8px;background:transparent;border:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;">×</button>
     <div id="tads-container-12176" style="margin-top:18px;min-height:60px;"></div>
   </div>
 </div>
@@ -962,29 +962,29 @@ function watchAd() {
   }
 }
 
-// ── نمایش تبلیغ اختیاری GigaPub بعد از Adsgram، سپس Adsterra، سپس ثبت پاداش ─
+// ── نمایش تبلیغ اختیاری GigaPub بعد از Adsgram، سپس TADS، سپس ثبت پاداش ─
 // GigaPub اختیاری است: چه کاربر آن را کامل ببیند، چه ببندد، چه هیچ تبلیغی
 // نمایش داده نشود یا ارور بدهد، در همه حالت‌ها هیچ خطایی به کاربر نشان داده
-// نمی‌شود و در نهایت (بعد از نوبت Adsterra) پاداش داده می‌شود.
+// نمی‌شود و در نهایت (بعد از نوبت TADS) پاداش داده می‌شود.
 function playGigaPubThenReward() {
   try {
     if (window.showGiga) {
       window.showGiga()
         .then(() => {
-          // تبلیغ GigaPub بسته شد -> حالا نوبت Adsterra
-          playAdsterraThenReward();
+          // تبلیغ GigaPub بسته شد -> حالا نوبت TADS
+          playTadsThenReward();
         })
         .catch(() => {
-          // هر خطایی از GigaPub (نمایش نیامد، رد شد و ...) نادیده گرفته می‌شود -> نوبت Adsterra
-          playAdsterraThenReward();
+          // هر خطایی از GigaPub (نمایش نیامد، رد شد و ...) نادیده گرفته می‌شود -> نوبت TADS
+          playTadsThenReward();
         });
     } else {
-      // اسکریپت GigaPub لود نشده -> بدون نمایش خطا، نوبت Adsterra
-      playAdsterraThenReward();
+      // اسکریپت GigaPub لود نشده -> بدون نمایش خطا، نوبت TADS
+      playTadsThenReward();
     }
   } catch (e) {
-    // هرگونه خطای غیرمنتظره در فراخوانی GigaPub کاملاً بی‌صدا باشد -> نوبت Adsterra
-    playAdsterraThenReward();
+    // هرگونه خطای غیرمنتظره در فراخوانی GigaPub کاملاً بی‌صدا باشد -> نوبت TADS
+    playTadsThenReward();
   }
 }
 
@@ -992,11 +992,11 @@ function playGigaPubThenReward() {
 // TADS هم اختیاری است: چه دیده شود چه نه، چه بارگذاری‌اش با خطا مواجه شود چه نه
 // (adsNotFound)، هیچ خطایی به کاربر نشان داده نمی‌شود و در انتها (چه با بستن
 // دستی، چه با اتمام زمان نمایش) پاداش داده می‌شود.
-function playAdsterraThenReward() {
+function playTadsThenReward() {
   try {
-    const overlay   = document.getElementById("adsterra-overlay");
+    const overlay   = document.getElementById("tads-overlay");
     const container = document.getElementById("tads-container-12176");
-    const closeBtn  = document.getElementById("adsterra-close-btn");
+    const closeBtn  = document.getElementById("tads-close-btn");
 
     if (!overlay || !container) {
       // اگر ساختار تبلیغ در صفحه نباشد، بدون نمایش خطا مستقیم پاداش داده شود
@@ -1005,7 +1005,7 @@ function playAdsterraThenReward() {
     }
 
     let finished = false;
-    function finishAdsterra() {
+    function finishTads() {
       if (finished) return;
       finished = true;
       overlay.style.display = "none";
@@ -1015,12 +1015,12 @@ function playAdsterraThenReward() {
 
     container.innerHTML = "";
     overlay.style.display = "flex";
-    if (closeBtn) closeBtn.onclick = finishAdsterra;
+    if (closeBtn) closeBtn.onclick = finishTads;
 
     try {
       const adsNotFoundCallback = () => {
         // تبلیغی برای نمایش پیدا نشد -> کاملاً بی‌صدا نادیده گرفته می‌شود
-        finishAdsterra();
+        finishTads();
       };
       const onClickRewardCallback = (adId) => {
         console.log("Clicked ad:", adId);
@@ -1039,16 +1039,16 @@ function playAdsterraThenReward() {
         .catch((err) => {
           console.log(err);
           // هرگونه خطای TADS کاملاً بی‌صدا نادیده گرفته می‌شود
-          finishAdsterra();
+          finishTads();
         });
     } catch (e) {
       // خطای غیرمنتظره هنگام فراخوانی TADS کاملاً بی‌صدا باشد
-      finishAdsterra();
+      finishTads();
     }
 
     // نمایش تبلیغ اختیاری است؛ کاربر می‌تواند ببندد، یا بعد از این بازهٔ کوتاه
     // به‌صورت خودکار ادامه داده می‌شود و پاداش ثبت می‌شود
-    setTimeout(finishAdsterra, 6000);
+    setTimeout(finishTads, 6000);
   } catch (e) {
     // هرگونه خطای غیرمنتظره در نمایش TADS کاملاً بی‌صدا باشد و پاداش داده شود
     grantAdReward();
