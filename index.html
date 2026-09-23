@@ -290,6 +290,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;
   box-shadow:0 4px 20px rgba(61,184,245,.2);transition:.3s}
 .sub-btn:hover{box-shadow:0 6px 28px rgba(61,184,245,.35);transform:translateY(-1px)}
+.sub-btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+.sub-btn:disabled:hover{box-shadow:none;transform:none}
 .min-warn{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.18);
   border-radius:10px;padding:10px 14px;font-size:12px;color:var(--red);
   margin-bottom:12px;display:flex;align-items:center;gap:7px}
@@ -514,21 +516,21 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         <div class="req-title"><span class="pip"></span><span id="t-req-title">Withdrawal Requirements</span></div>
         <div class="req-item">
           <div class="req-item-row">
-            <span class="req-item-lbl">👁 <span id="t-req-ads">Ads Watched</span></span>
+            <span class="req-item-lbl">👁 <span id="t-req-ads">Watch 50 Ads</span></span>
             <span class="req-item-val" id="req-ads-val">0/50</span>
           </div>
           <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-ads-bar" style="width:0%"></div></div>
         </div>
         <div class="req-item">
           <div class="req-item-row">
-            <span class="req-item-lbl">👥 <span id="t-req-friends">Friends Invited</span></span>
+            <span class="req-item-lbl">👥 <span id="t-req-friends">Invite 5 Friends</span></span>
             <span class="req-item-val" id="req-friends-val">0/5</span>
           </div>
           <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-friends-bar" style="width:0%"></div></div>
         </div>
         <div class="req-item">
           <div class="req-item-row">
-            <span class="req-item-lbl">✅ <span id="t-req-tasks">Tasks Completed</span></span>
+            <span class="req-item-lbl">✅ <span id="t-req-tasks">Complete All Required Tasks</span></span>
             <span class="req-item-val" id="req-tasks-val">0/3</span>
           </div>
           <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-tasks-bar" style="width:0%"></div></div>
@@ -561,7 +563,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <div class="inp-lbl" id="t-wallet">WALLET ADDRESS</div>
           <input class="inp" id="w-addr" placeholder="TXyz...abc"/>
         </div>
-        <button class="sub-btn" onclick="submitWithdraw()">🚀 <span id="t-submit">Submit Withdrawal Request</span></button>
+        <button class="sub-btn" id="submit-withdraw-btn" onclick="submitWithdraw()">🚀 <span id="t-submit">Submit Withdrawal Request</span></button>
       </div>
 
       <!-- Withdraw History -->
@@ -629,6 +631,7 @@ const MAX_ADS_DAY  = 15;
 const REQ_ADS      = 50;
 const REQ_FRIENDS  = 5;
 const REQ_TASKS    = 3;
+const MIN_WITHDRAW = 15;
 
 const T = {
   en:{
@@ -647,7 +650,7 @@ const T = {
     tgAdsDesc:"To earn from Telegram ads, your channel needs <strong style='color:var(--accent)'>1,000+ subscribers</strong>. Once eligible, connect via <strong style='color:var(--gold)'>fragment.com</strong>.",
     readyEarn:"Ready to earn",copying:"Copied!",
     adLoading:"Loading ad…",adWatching:"Watching…",
-    reqTitle:"Withdrawal Requirements",reqAds:"Ads Watched",reqFriends:"Friends Invited",reqTasks:"Tasks Completed",
+    reqTitle:"Withdrawal Requirements",reqAds:"Watch 50 Ads",reqFriends:"Invite 5 Friends",reqTasks:"Complete All Required Tasks",
   },
   fa:{
     support:"پشتیبانی",totalBalance:"موجودی کل",available:"قابل برداشت",
@@ -665,7 +668,7 @@ const T = {
     tgAdsDesc:"برای درآمد از تبلیغات تلگرام، کانال شما نیاز به <strong style='color:var(--accent)'>بیش از ۱۰۰۰ مشترک</strong> دارد. پس از واجد شرایط شدن، از طریق <strong style='color:var(--gold)'>fragment.com</strong> متصل شوید.",
     readyEarn:"آماده برای کسب درآمد",copying:"کپی شد!",
     adLoading:"در حال بارگذاری تبلیغ…",adWatching:"در حال تماشا…",
-    reqTitle:"شرایط برداشت",reqAds:"تبلیغات دیده‌شده",reqFriends:"دوستان دعوت‌شده",reqTasks:"وظایف انجام‌شده",
+    reqTitle:"شرایط برداشت",reqAds:"تماشای ۵۰ تبلیغ",reqFriends:"دعوت ۵ دوست",reqTasks:"انجام تمام وظایف لازم",
   },
   ar:{
     support:"الدعم",totalBalance:"الرصيد الكلي",available:"متاح للسحب",
@@ -683,7 +686,7 @@ const T = {
     tgAdsDesc:"لكسب المال من إعلانات تيليغرام، تحتاج قناتك إلى <strong style='color:var(--accent)'>1000+ مشترك</strong>. بعد الأهلية، اتصل عبر <strong style='color:var(--gold)'>fragment.com</strong>.",
     readyEarn:"جاهز للكسب",copying:"تم النسخ!",
     adLoading:"جارٍ تحميل الإعلان…",adWatching:"جارٍ المشاهدة…",
-    reqTitle:"شروط السحب",reqAds:"الإعلانات المشاهدة",reqFriends:"الأصدقاء المدعوون",reqTasks:"المهام المكتملة",
+    reqTitle:"شروط السحب",reqAds:"مشاهدة 50 إعلان",reqFriends:"دعوة 5 أصدقاء",reqTasks:"إكمال جميع المهام المطلوبة",
   },
   ru:{
     support:"Поддержка",totalBalance:"ОБЩИЙ БАЛАНС",available:"Доступно для вывода",
@@ -701,7 +704,7 @@ const T = {
     tgAdsDesc:"Для заработка на рекламе Telegram нужно <strong style='color:var(--accent)'>1000+ подписчиков</strong>. После — подключись через <strong style='color:var(--gold)'>fragment.com</strong>.",
     readyEarn:"Готово к заработку",copying:"Скопировано!",
     adLoading:"Загрузка рекламы…",adWatching:"Просмотр…",
-    reqTitle:"Условия вывода",reqAds:"Просмотрено рекламы",reqFriends:"Приглашено друзей",reqTasks:"Выполнено заданий",
+    reqTitle:"Условия вывода",reqAds:"Просмотр 50 реклам",reqFriends:"Пригласить 5 друзей",reqTasks:"Выполнить все задания",
   },
   tr:{
     support:"Destek",totalBalance:"TOPLAM BAKİYE",available:"Çekilebilir miktar",
@@ -719,7 +722,7 @@ const T = {
     tgAdsDesc:"Telegram reklamlarından kazanmak için kanalının <strong style='color:var(--accent)'>1.000+ abonesi</strong> olması gerekir. Uygun olunca <strong style='color:var(--gold)'>fragment.com</strong> üzerinden bağlan.",
     readyEarn:"Kazanmaya hazır",copying:"Kopyalandı!",
     adLoading:"Reklam yükleniyor…",adWatching:"İzleniyor…",
-    reqTitle:"Çekim Şartları",reqAds:"İzlenen Reklamlar",reqFriends:"Davet Edilenler",reqTasks:"Tamamlanan Görevler",
+    reqTitle:"Çekim Şartları",reqAds:"50 Reklam İzle",reqFriends:"5 Arkadaş Davet Et",reqTasks:"Tüm Gerekli Görevleri Tamamla",
   },
   hi:{
     support:"सहायता",totalBalance:"कुल शेष",available:"निकासी योग्य",
@@ -737,7 +740,7 @@ const T = {
     tgAdsDesc:"Telegram विज्ञापनों से कमाने के लिए आपके चैनल में <strong style='color:var(--accent)'>1,000+ सदस्य</strong> होने चाहिए। पात्र होने पर <strong style='color:var(--gold)'>fragment.com</strong> से जुड़ें।",
     readyEarn:"कमाने के लिए तैयार",copying:"कॉपी हो गया!",
     adLoading:"विज्ञापन लोड हो रहा है…",adWatching:"देख रहे हैं…",
-    reqTitle:"निकासी शर्तें",reqAds:"देखे गए विज्ञापन",reqFriends:"आमंत्रित मित्र",reqTasks:"पूर्ण किए गए कार्य",
+    reqTitle:"निकासी शर्तें",reqAds:"50 विज्ञापन देखें",reqFriends:"5 मित्रों को आमंत्रित करें",reqTasks:"सभी आवश्यक कार्य पूर्ण करें",
   },
 };
 
@@ -944,11 +947,19 @@ function renderTask(key, done) {
   btn.onclick      = done ? null : btn.onclick;
 }
 
-// ── Withdrawal requirements: always visible, always reflects real user data ──
+// ── Withdrawal requirements: hidden until balance >= $15, shown only inside
+// the Withdraw tab, and gate the withdraw button until all 3 are complete ──
 function renderWithdrawRequirements() {
+  const balance = userData.balance || 0;
   const adsDone = Math.min(userData.adsWatched || 0, REQ_ADS);
   const friendsDone = Math.min(userData.inviteCount || 0, REQ_FRIENDS);
   const tasksDone = ["ch1","ch2","bot"].filter(k => userData.tasks?.[k]).length;
+  const allReqsMet = adsDone >= REQ_ADS && friendsDone >= REQ_FRIENDS && tasksDone >= REQ_TASKS;
+
+  const reqCard = document.getElementById("req-card");
+  if (reqCard) {
+    reqCard.style.display = balance >= MIN_WITHDRAW ? "" : "none";
+  }
 
   const setReq = (key, done, total) => {
     const valEl = document.getElementById(`req-${key}-val`);
@@ -964,6 +975,12 @@ function renderWithdrawRequirements() {
   setReq("ads", adsDone, REQ_ADS);
   setReq("friends", friendsDone, REQ_FRIENDS);
   setReq("tasks", tasksDone, REQ_TASKS);
+
+  const submitBtn = document.getElementById("submit-withdraw-btn");
+  if (submitBtn) {
+    const canWithdraw = balance >= MIN_WITHDRAW && allReqsMet;
+    submitBtn.disabled = !canWithdraw;
+  }
 }
 
 function getNextAdTime() {
@@ -1264,6 +1281,14 @@ async function loadWithdrawHistory() {
 }
 
 async function submitWithdraw() {
+  const adsDone = Math.min(userData.adsWatched || 0, REQ_ADS);
+  const friendsDone = Math.min(userData.inviteCount || 0, REQ_FRIENDS);
+  const tasksDone = ["ch1","ch2","bot"].filter(k => userData.tasks?.[k]).length;
+  const allReqsMet = adsDone >= REQ_ADS && friendsDone >= REQ_FRIENDS && tasksDone >= REQ_TASKS;
+
+  if ((userData.balance||0) < MIN_WITHDRAW) { showToast("Minimum $15.00 required"); return; }
+  if (!allReqsMet) { showToast("Complete all withdrawal requirements first"); return; }
+
   const amt  = parseFloat(document.getElementById("w-amount").value);
   const addr = document.getElementById("w-addr").value.trim();
   if (!amt || amt < 15)  { showToast("Minimum $15.00 required"); return; }
