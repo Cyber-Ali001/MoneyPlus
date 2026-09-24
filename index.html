@@ -297,22 +297,30 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   margin-bottom:12px;display:flex;align-items:center;gap:7px}
 
 /* ── Withdraw Requirements ────────────────────── */
-.req-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r);
-  padding:16px;margin-bottom:12px}
-.req-title{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;
-  margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.req-item{margin-bottom:12px}
+.req-card{background:linear-gradient(160deg,var(--card) 0%,var(--card2) 100%);
+  border:1px solid var(--border2);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.req-title{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;
+  margin:2px 2px 12px;display:flex;align-items:center;gap:8px}
+.req-item{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  min-width:0;transition:background .3s,border-color .3s}
 .req-item:last-child{margin-bottom:0}
-.req-item-row{display:flex;justify-content:space-between;align-items:center;
-  font-size:12px;margin-bottom:5px}
-.req-item-lbl{color:var(--sub);display:flex;align-items:center;gap:6px}
-.req-item-val{font-weight:700;color:var(--text)}
-.req-item-val.done{color:var(--green)}
-.req-pbar-bg{background:rgba(255,255,255,.06);border-radius:10px;height:5px;overflow:hidden}
-.req-pbar-fill{height:100%;border-radius:10px;transition:width .4s;
-  background:linear-gradient(90deg,var(--accent),var(--green))}
+.req-item.done{background:rgba(31,203,160,.08);border-color:rgba(31,203,160,.35)}
+.req-ic{width:40px;height:40px;border-radius:12px;background:rgba(61,184,245,.10);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.req-item.done .req-ic{background:rgba(31,203,160,.16)}
+.req-body{flex:1;min-width:0}
+.req-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;
+  overflow-wrap:anywhere}
+.req-meta{font-size:11px;color:var(--muted);margin:2px 0 8px}
+.req-pbar-bg{background:rgba(255,255,255,.06);border-radius:10px;height:6px;overflow:hidden}
+.req-pbar-fill{height:100%;border-radius:10px;transition:width .5s ease;
+  background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .req-pbar-fill.done{background:linear-gradient(90deg,var(--green),#0CA070)}
-.req-check{color:var(--green);font-size:13px}
+.req-item-val{flex-shrink:0;font-size:11px;font-weight:700;padding:5px 10px;
+  border-radius:20px;white-space:nowrap;
+  background:rgba(61,184,245,.12);color:var(--accent)}
+.req-item-val.done{background:rgba(31,203,160,.16);color:var(--green)}
 
 /* ── Lang Modal ───────────────────────────────── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;
@@ -514,26 +522,35 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 
       <div class="req-card" id="req-card">
         <div class="req-title"><span class="pip"></span><span id="t-req-title">Withdrawal Requirements</span></div>
+
         <div class="req-item">
-          <div class="req-item-row">
-            <span class="req-item-lbl">👁 <span id="t-req-ads">Watch 50 Ads</span></span>
-            <span class="req-item-val" id="req-ads-val">0/50</span>
+          <div class="req-ic">👁</div>
+          <div class="req-body">
+            <div class="req-name req-item-lbl" id="t-req-ads">Watch 50 Ads</div>
+            <div class="req-meta" id="req-ads-meta">0 / 50</div>
+            <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-ads-bar" style="width:0%"></div></div>
           </div>
-          <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-ads-bar" style="width:0%"></div></div>
+          <span class="req-item-val" id="req-ads-val">0/50</span>
         </div>
+
         <div class="req-item">
-          <div class="req-item-row">
-            <span class="req-item-lbl">👥 <span id="t-req-friends">Invite 5 Friends</span></span>
-            <span class="req-item-val" id="req-friends-val">0/5</span>
+          <div class="req-ic">👥</div>
+          <div class="req-body">
+            <div class="req-name req-item-lbl" id="t-req-friends">Invite 5 Friends</div>
+            <div class="req-meta" id="req-friends-meta">0 / 5</div>
+            <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-friends-bar" style="width:0%"></div></div>
           </div>
-          <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-friends-bar" style="width:0%"></div></div>
+          <span class="req-item-val" id="req-friends-val">0/5</span>
         </div>
+
         <div class="req-item">
-          <div class="req-item-row">
-            <span class="req-item-lbl">✅ <span id="t-req-tasks">Complete All Required Tasks</span></span>
-            <span class="req-item-val" id="req-tasks-val">0/3</span>
+          <div class="req-ic">✅</div>
+          <div class="req-body">
+            <div class="req-name req-item-lbl" id="t-req-tasks">Complete All Required Tasks</div>
+            <div class="req-meta" id="req-tasks-meta">0 / 3</div>
+            <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-tasks-bar" style="width:0%"></div></div>
           </div>
-          <div class="req-pbar-bg"><div class="req-pbar-fill" id="req-tasks-bar" style="width:0%"></div></div>
+          <span class="req-item-val" id="req-tasks-val">0/3</span>
         </div>
       </div>
 
@@ -972,10 +989,13 @@ function renderWithdrawRequirements() {
     const barEl = document.getElementById(`req-${key}-bar`);
     if (!valEl || !barEl) return;
     const complete = done >= total;
-    valEl.textContent = `${done}/${total}`;
+    const metaEl = document.getElementById(`req-${key}-meta`);
+    if (metaEl) metaEl.textContent = `${done} / ${total}`;
+    valEl.textContent = complete ? (T[lang]?.done || "Done ✓") : `${done}/${total}`;
     valEl.classList.toggle("done", complete);
     barEl.style.width = Math.min((done/total)*100, 100) + "%";
     barEl.classList.toggle("done", complete);
+    valEl.closest(".req-item")?.classList.toggle("done", complete);
   };
 
   setReq("ads", adsDone, REQ_ADS);
