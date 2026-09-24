@@ -760,6 +760,12 @@ let watching   = false;
 let payMethod  = "usdt";
 let dbReady    = false;
 
+// ── Reward-lock: guarantees at most ONE reward per Watch Ads click,
+// regardless of which ad network (AdsGram or the GigaPub fallback) ends up
+// granting it. Reset at the start of every watchAd() call, checked inside
+// grantAdReward() before anything is credited. ─────────────────────────
+let adRewardLock = false;
+
 // ── Adsgram AdController (initialized once) ───────────────────
 let AdController = null;
 function getAdController() {
@@ -1017,7 +1023,10 @@ function startCountdown() {
   }, 1000);
 }
 
-// ── watchAd: نمایش تبلیغ Adsgram، سپس ثبت پاداش ──────────────
+// ── watchAd: AdsGram first. Only if AdsGram genuinely fails to show/complete
+// an ad (no ad available, SDK error, timeout, etc.) do we fall back to
+// GigaPub. If AdsGram succeeds, GigaPub is never triggered for that click —
+// max one ad, max one reward per click. ────────────────────────────────
 function watchAd() {
   if (watching) return;
 
@@ -1040,121 +1049,84 @@ function watchAd() {
   }
 
   watching = true;
+  adRewardLock = false; // reset the per-click reward guard
   document.getElementById("ad-play-ic").textContent = "⏳";
   document.getElementById("ad-status").textContent = T[lang].adLoading || "Loading ad…";
 
-  // نمایش تبلیغ Adsgram Rewarded (با fallback فقط وقتی SDK لود نشده)
   const controller = getAdController();
   if (controller) {
     controller.show()
       .then((result) => {
-        if (result.done) {
-          // تبلیغ Adsgram (اجباری) تا انتها دیده شد -> حالا تبلیغ اختیاری GigaPub نمایش داده شود
-          // پاداش فقط بعد از بسته‌شدن GigaPub (چه دیده شود چه ارور بدهد) داده می‌شود
-          playGigaPubThenReward();
+        if (result && result.done) {
+          // AdsGram was shown and completed successfully -> grant the
+          // existing reward directly. GigaPub is NOT triggered.
+          grantAdReward();
         } else {
-          // تبلیغ کامل دیده نشد (کاربر آن را بست) -> بدون پاداش
-          watching = false;
-          document.getElementById("ad-play-ic").textContent = "▶";
-          document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
-          showToast("Ad was not completed. Try again.");
+          // AdsGram did not complete the ad (user closed it, or the
+          // network reported no completion) -> try the GigaPub fallback.
+          console.warn("Adsgram ad not completed, falling back to GigaPub");
+          tryGigaPubFallback();
         }
       })
       .catch((result) => {
-        // خطای واقعی Adsgram (rate-limit / too often / moderation و ...) -> بدون پاداش
-        console.warn("Adsgram ad error:", result);
-        watching = false;
-        document.getElementById("ad-play-ic").textContent = "▶";
-        document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
-        showToast("⏰ Please wait a few seconds and try again.");
+        // AdsGram failed to show an ad at all (no ad available, SDK error,
+        // timeout, etc.) -> try the GigaPub fallback.
+        console.warn("Adsgram ad error/unavailable:", result);
+        tryGigaPubFallback();
       });
   } else {
-    // فقط وقتی SDK اصلاً لود نشده (مثلاً خارج از تلگرام/حالت تست) از fallback استفاده کن
+    // Adsgram SDK not loaded at all (e.g. outside Telegram / test mode) ->
+    // this is unrelated to the AdsGram/GigaPub fallback and keeps its
+    // previous simulated behavior.
     console.warn("Adsgram SDK not loaded, using fallback");
     simulateAdFallback();
   }
 }
 
-// ── نمایش تبلیغ اختیاری GigaPub بعد از Adsgram، سپس Adsterra، سپس ثبت پاداش ─
-// GigaPub اختیاری است: چه کاربر آن را کامل ببیند، چه ببندد، چه هیچ تبلیغی
-// نمایش داده نشود یا ارور بدهد، در همه حالت‌ها هیچ خطایی به کاربر نشان داده
-// نمی‌شود و در نهایت (بعد از نوبت Adsterra) پاداش داده می‌شود.
-function playGigaPubThenReward() {
+// ── GigaPub fallback: only ever called when AdsGram genuinely failed to
+// deliver an ad for this click. If GigaPub succeeds, grant the SAME
+// existing reward (never a second/extra reward). If GigaPub also fails,
+// no reward is given and the button is unlocked with a friendly message. ─
+function tryGigaPubFallback() {
+  document.getElementById("ad-status").textContent = T[lang].adLoading || "Loading ad…";
   try {
     if (window.showGiga) {
       window.showGiga()
         .then(() => {
-          // تبلیغ GigaPub بسته شد -> حالا نوبت Adsterra
-          playAdsterraThenReward();
+          // GigaPub ad completed successfully -> grant the single reward.
+          grantAdReward();
         })
-        .catch(() => {
-          // هر خطایی از GigaPub (نمایش نیامد، رد شد و ...) نادیده گرفته می‌شود -> نوبت Adsterra
-          playAdsterraThenReward();
+        .catch((err) => {
+          // GigaPub also failed / had no ad -> no reward for this click.
+          console.warn("GigaPub ad error/unavailable:", err);
+          noAdAvailable();
         });
     } else {
-      // اسکریپت GigaPub لود نشده -> بدون نمایش خطا، نوبت Adsterra
-      playAdsterraThenReward();
+      // GigaPub script not available -> no reward for this click.
+      console.warn("GigaPub SDK not loaded");
+      noAdAvailable();
     }
   } catch (e) {
-    // هرگونه خطای غیرمنتظره در فراخوانی GigaPub کاملاً بی‌صدا باشد -> نوبت Adsterra
-    playAdsterraThenReward();
+    console.warn("GigaPub ad exception:", e);
+    noAdAvailable();
   }
 }
 
-// ── نمایش تبلیغ اختیاری Adsterra بعد از GigaPub، سپس ثبت پاداش ────
-// Adsterra هم اختیاری است: چه دیده شود چه نه، چه بارگذاری‌اش با خطا مواجه شود چه نه،
-// هیچ خطایی به کاربر نشان داده نمی‌شود و در انتها (چه با بستن دستی، چه با اتمام
-// زمان نمایش) پاداش داده می‌شود. Adsterra کال‌بک تکمیل ندارد، پس یک بازهٔ کوتاه
-// برای نمایش در نظر گرفته می‌شود و بعد به‌صورت خودکار ادامه داده می‌شود.
-function playAdsterraThenReward() {
-  try {
-    const overlay   = document.getElementById("adsterra-overlay");
-    const container = document.getElementById("container-2627a98398e0bd59cb2bf0a890d9d6ff");
-    const closeBtn  = document.getElementById("adsterra-close-btn");
-
-    if (!overlay || !container) {
-      // اگر ساختار تبلیغ در صفحه نباشد، بدون نمایش خطا مستقیم پاداش داده شود
-      grantAdReward();
-      return;
-    }
-
-    let finished = false;
-    function finishAdsterra() {
-      if (finished) return;
-      finished = true;
-      overlay.style.display = "none";
-      container.innerHTML = "";
-      grantAdReward();
-    }
-
-    container.innerHTML = "";
-    overlay.style.display = "flex";
-    if (closeBtn) closeBtn.onclick = finishAdsterra;
-
-    try {
-      const script = document.createElement("script");
-      script.async = true;
-      script.setAttribute("data-cfasync", "false");
-      script.src = "https://pl30875740.effectivecpmnetwork.com/2627a98398e0bd59cb2bf0a890d9d6ff/invoke.js";
-      script.onerror = function () {
-        // بارگذاری تبلیغ Adsterra با خطا مواجه شد -> کاملاً بی‌صدا نادیده گرفته می‌شود
-      };
-      container.appendChild(script);
-    } catch (e) {
-      // خطای غیرمنتظره هنگام درج اسکریپت Adsterra کاملاً بی‌صدا باشد
-    }
-
-    // نمایش تبلیغ اختیاری است؛ کاربر می‌تواند ببندد، یا بعد از این بازهٔ کوتاه
-    // به‌صورت خودکار ادامه داده می‌شود و پاداش ثبت می‌شود
-    setTimeout(finishAdsterra, 6000);
-  } catch (e) {
-    // هرگونه خطای غیرمنتظره در نمایش Adsterra کاملاً بی‌صدا باشد و پاداش داده شود
-    grantAdReward();
-  }
+// ── Called when both AdsGram and GigaPub failed to deliver an ad for this
+// click. No reward is granted, and the button is unlocked again. ────────
+function noAdAvailable() {
+  watching = false;
+  document.getElementById("ad-play-ic").textContent = "▶";
+  document.getElementById("ad-status").textContent = T[lang].readyEarn || "Ready to earn";
+  showToast("No ad available right now. Please try again.");
 }
 
-// ── ثبت پاداش پس از تکمیل واقعی تبلیغ ─────────────────────────
+// ── ثبت پاداش پس از تکمیل واقعی تبلیغ (AdsGram یا GigaPub، هرکدام موفق شد) ─
+// adRewardLock تضمین می‌کند برای هر کلیک حداکثر فقط یک بار پاداش داده شود.
 async function grantAdReward() {
+  if (adRewardLock) return;
+  adRewardLock = true;
+
   const today = new Date().toDateString();
   document.getElementById("ad-play-ic").textContent = "▶";
   userData.balance    = +((userData.balance    || 0) + AD_REWARD).toFixed(2);
@@ -1178,7 +1150,7 @@ async function grantAdReward() {
     return;
   }
 
-  // قفل موقت ۴ ثانیه‌ای روی کارت تبلیغ تا Adsgram تبلیغ بعدی را آماده کند
+  // قفل موقت ۴ ثانیه‌ای روی کارت تبلیغ تا تبلیغ بعدی آماده شود
   // این از کلیک‌های پیاپی (spam click) بلافاصله بعد از پاداش جلوگیری می‌کند
   const adCard = document.getElementById("ad-card");
   adCard?.classList.add("locked");
