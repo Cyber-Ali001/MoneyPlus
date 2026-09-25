@@ -1043,10 +1043,14 @@ function startCountdown() {
   }, 1000);
 }
 
-// ── watchAd: AdsGram first. Only if AdsGram genuinely fails to show/complete
-// an ad (no ad available, SDK error, timeout, etc.) do we fall back to
-// GigaPub. If AdsGram succeeds, GigaPub is never triggered for that click —
-// max one ad, max one reward per click. ────────────────────────────────
+// ── watchAd: AdsGram runs first and MUST complete successfully for any
+// reward to be possible. If AdsGram succeeds, GigaPub is then run exactly
+// once as a silent second step — GigaPub's own outcome (success, failure,
+// error, timeout, skip, or missing SDK) never blocks or changes the
+// reward, since AdsGram already succeeded. If AdsGram fails, errors,
+// times out, has no ad, is skipped/closed, or its SDK/controller is
+// missing, the chain stops completely: GigaPub is never run and no
+// reward is given. No other fallback or simulation is used. ───────────
 function watchAd() {
   if (watching) return;
 
@@ -1078,57 +1082,65 @@ function watchAd() {
     controller.show()
       .then((result) => {
         if (result && result.done) {
-          // AdsGram was shown and completed successfully -> grant the
-          // existing reward directly. GigaPub is NOT triggered.
-          grantAdReward();
+          // AdsGram was shown and completed successfully -> run GigaPub
+          // once (silently) and then grant the reward regardless of
+          // GigaPub's outcome.
+          runGigaPubThenReward();
         } else {
-          // AdsGram did not complete the ad (user closed it, or the
-          // network reported no completion) -> try the GigaPub fallback.
-          console.warn("Adsgram ad not completed, falling back to GigaPub");
-          tryGigaPubFallback();
+          // AdsGram did not complete the ad (user closed it, skipped it,
+          // or the network reported no completion) -> stop completely.
+          // No GigaPub, no reward.
+          console.warn("Adsgram ad not completed, no reward");
+          noAdAvailable();
         }
       })
       .catch((result) => {
-        // AdsGram failed to show an ad at all (no ad available, SDK error,
-        // timeout, etc.) -> try the GigaPub fallback.
+        // AdsGram failed to show an ad at all (no ad available, SDK
+        // error, timeout, etc.) -> stop completely. No GigaPub, no reward.
         console.warn("Adsgram ad error/unavailable:", result);
-        tryGigaPubFallback();
+        noAdAvailable();
       });
   } else {
-    // Adsgram SDK not loaded at all (e.g. outside Telegram / test mode) ->
-    // this is unrelated to the AdsGram/GigaPub fallback and keeps its
-    // previous simulated behavior.
-    console.warn("Adsgram SDK not loaded, using fallback");
-    simulateAdFallback();
+    // Adsgram SDK/controller not loaded at all -> treated the same as an
+    // AdsGram failure: stop completely, no fallback, no simulation, no
+    // reward.
+    console.warn("Adsgram SDK not loaded, no reward");
+    noAdAvailable();
   }
 }
 
-// ── GigaPub fallback: only ever called when AdsGram genuinely failed to
-// deliver an ad for this click. If GigaPub succeeds, grant the SAME
-// existing reward (never a second/extra reward). If GigaPub also fails,
-// no reward is given and the button is unlocked with a friendly message. ─
-function tryGigaPubFallback() {
+// ── GigaPub: only ever called after AdsGram has genuinely succeeded for
+// this click. Runs GigaPub exactly once; whatever happens with GigaPub
+// (success, failure, error, timeout, skip/close, or missing SDK) is
+// silent and does NOT affect whether the reward is granted — the reward
+// is granted in every case, because AdsGram already completed
+// successfully. ─────────────────────────────────────────────────────
+function runGigaPubThenReward() {
   document.getElementById("ad-status").textContent = T[lang].adLoading || "Loading ad…";
   try {
     if (window.showGiga) {
       window.showGiga()
         .then(() => {
-          // GigaPub ad completed successfully -> grant the single reward.
+          // GigaPub completed successfully -> grant the reward.
           grantAdReward();
         })
         .catch((err) => {
-          // GigaPub also failed / had no ad -> no reward for this click.
-          console.warn("GigaPub ad error/unavailable:", err);
-          noAdAvailable();
+          // GigaPub failed/had no ad -> still silent, reward is granted
+          // anyway since AdsGram already succeeded.
+          console.warn("GigaPub ad error/unavailable (silent):", err);
+          grantAdReward();
         });
     } else {
-      // GigaPub script not available -> no reward for this click.
-      console.warn("GigaPub SDK not loaded");
-      noAdAvailable();
+      // GigaPub script not available -> still silent, reward is granted
+      // anyway since AdsGram already succeeded.
+      console.warn("GigaPub SDK not loaded (silent)");
+      grantAdReward();
     }
   } catch (e) {
-    console.warn("GigaPub ad exception:", e);
-    noAdAvailable();
+    // Any GigaPub exception -> still silent, reward is granted anyway
+    // since AdsGram already succeeded.
+    console.warn("GigaPub ad exception (silent):", e);
+    grantAdReward();
   }
 }
 
